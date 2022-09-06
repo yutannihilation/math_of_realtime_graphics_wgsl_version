@@ -76,9 +76,11 @@ impl State {
     }
 }
 
-fn main() {
+async fn run() {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
+
+    let mut state = State::new(&window).await;
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -99,4 +101,8 @@ fn main() {
         },
         _ => {}
     });
+}
+
+fn main() {
+    pollster::block_on(run());
 }

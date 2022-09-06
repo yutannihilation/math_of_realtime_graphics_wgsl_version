@@ -1,9 +1,13 @@
-use wgpu::Surface;
 use winit::{
+    dpi::LogicalSize,
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
+
+// TODO
+const HEIGHT: f64 = 1000.0;
+const WIDTH: f64 = 1000.0;
 
 struct State {
     surface: wgpu::Surface,
@@ -31,7 +35,7 @@ impl State {
         let (device, queue) = adapter
             .request_device(
                 &wgpu::DeviceDescriptor {
-                    label: Some("wgpu-cli"),
+                    label: Some("Device Descriptor"),
                     features: wgpu::Features::empty(), // TODO
                     limits: wgpu::Limits::default(),
                 },
@@ -59,26 +63,58 @@ impl State {
         }
     }
 
-    fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
-        todo!()
-    }
+    // Don't implement resize for simplicity
+    //
+    // fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {}
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        todo!()
+        false
     }
 
     fn update(&mut self) {
-        todo!()
+        // TODO
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        todo!()
+        let output = self.surface.get_current_texture()?;
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
+
+        {
+            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass Descriptor"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::BLUE),
+                        store: true,
+                    },
+                })],
+                depth_stencil_attachment: None,
+            });
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+
+        Ok(())
     }
 }
 
 async fn run() {
     let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let window = WindowBuilder::new()
+        .with_inner_size(LogicalSize::new(WIDTH, HEIGHT)) // fixed size
+        .with_resizable(false)
+        .build(&event_loop)
+        .unwrap();
 
     let mut state = State::new(&window).await;
 
@@ -86,19 +122,46 @@ async fn run() {
         Event::WindowEvent {
             window_id,
             ref event,
-        } if window_id == window.id() => match event {
-            WindowEvent::CloseRequested
-            | WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state: ElementState::Pressed,
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
+        } if window_id == window.id() => {
+            if !state.input(event) {
+                match event {
+                    WindowEvent::CloseRequested
+                    | WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::Escape),
+                                ..
+                            },
                         ..
-                    },
-                ..
-            } => *control_flow = ControlFlow::Exit,
-            _ => {}
-        },
+                    } => *control_flow = ControlFlow::Exit,
+                    _ => {}
+                }
+            }
+        }
+        Event::RedrawRequested(window_id) if window_id == window.id() => {
+            state.update();
+            match state.render() {
+                Ok(_) => {}
+                Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::OutOfMemory) => {
+                    *control_flow = ControlFlow::Exit;
+                }
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+        // According to the [doc],
+        //
+        // > If your program only draws graphics when something changes, it’s
+        // > usually better to do it in response to Event::RedrawRequested,
+        // > which gets emitted immediately after this event. Programs that draw
+        // > graphics continuously, like most games, can render here
+        // > unconditionally for simplicity.
+        //
+        // [doc]:
+        //     https://docs.rs/winit/latest/winit/event/enum.Event.html#variant.MainEventsCleared
+        Event::MainEventsCleared => {
+            window.request_redraw();
+        }
         _ => {}
     });
 }

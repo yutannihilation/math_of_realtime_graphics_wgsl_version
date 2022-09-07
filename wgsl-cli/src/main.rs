@@ -214,7 +214,7 @@ impl State {
             size,
 
             start_time: std::time::Instant::now(),
-            last_time_elapsed: 1.0,
+            last_time_elapsed: 0.0,
             frame: 0,
 
             vertex_buffer,
@@ -230,6 +230,30 @@ impl State {
     // fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {}
 
     fn input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::CloseRequested => {
+                return true;
+            }
+            WindowEvent::KeyboardInput { input, .. } => {
+                if input.state == ElementState::Pressed {
+                    match input.virtual_keycode {
+                        Some(VirtualKeyCode::Escape) => {
+                            return true;
+                        }
+                        // reset time
+                        Some(VirtualKeyCode::Space) => {
+                            log::info!("The time and frame are reset.");
+                            self.start_time = std::time::Instant::now();
+                            self.last_time_elapsed = 0.0;
+                            self.frame = 0;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+
         false
     }
 
@@ -320,20 +344,8 @@ async fn run(frag_shader_code: String, width: f64, height: f64) {
             window_id,
             ref event,
         } if window_id == window.id() => {
-            if !state.input(event) {
-                match event {
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => *control_flow = ControlFlow::Exit,
-                    _ => {}
-                }
+            if state.input(event) {
+                *control_flow = ControlFlow::Exit;
             }
         }
         Event::RedrawRequested(window_id) if window_id == window.id() => {

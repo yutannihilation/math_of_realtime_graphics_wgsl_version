@@ -6,11 +6,17 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# wgpu
 wgpu = { git = "https://github.com/gfx-rs/wgpu" }
+bytemuck = { version = "1.12", features = [ "derive" ] }
 
+# window-related
 winit = "0.27"
 pollster = "0.2"
 
-bytemuck = { version = "1.12", features = [ "derive" ] }
-
+# to create a CLI
 argh = "0.1.8"
+
+# logging
+log = "0.4"
+env_logger = "0.9"

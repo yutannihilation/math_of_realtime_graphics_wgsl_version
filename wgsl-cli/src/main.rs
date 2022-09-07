@@ -1,8 +1,4 @@
-use std::{
-    fs, os,
-    process::exit,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::{fs, process::exit};
 
 use argh::FromArgs;
 
@@ -15,8 +11,12 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+// window size
 const DEFAULT_HEIGHT: f64 = 1000.0;
 const DEFAULT_WIDTH: f64 = 1000.0;
+
+// logging
+const DEFAULT_LOG_LEVEL: &str = "info";
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -50,8 +50,9 @@ const RECT_INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 struct Globals {
     resolution: [f32; 2],
     time: f32,
-    frame: u32,
-    mouse_pos: [f32; 2],
+    _padding: u32,
+    // frame: u32,
+    // mouse_pos: [f32; 2],
 }
 
 struct State {
@@ -64,6 +65,7 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
 
     start_time: std::time::Instant,
+    last_time_elapsed: f32,
     frame: u32,
 
     vertex_buffer: wgpu::Buffer,
@@ -212,6 +214,7 @@ impl State {
             size,
 
             start_time: std::time::Instant::now(),
+            last_time_elapsed: 1.0,
             frame: 0,
 
             vertex_buffer,
@@ -231,10 +234,23 @@ impl State {
     }
 
     fn update(&mut self) {
-        self.frame += 1;
+        // TODO;
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.frame += 1;
+        let time = self.start_time.elapsed().as_secs_f32();
+
+        if self.frame % 10 == 0 {
+            log::info!(
+                "frame: {} (fps: {:.3})",
+                self.frame,
+                10. / (time - self.last_time_elapsed)
+            );
+
+            self.last_time_elapsed = time;
+        }
+
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
@@ -249,11 +265,12 @@ impl State {
             &self.globals_uniform_buffer,
             0,
             bytemuck::cast_slice(&[Globals {
-                resolution: [self.config.width as _, self.config.height as _],
+                resolution: [self.size.width as _, self.size.height as _],
                 // todo
-                time: self.start_time.elapsed().as_secs_f32(),
-                frame: self.frame,
-                mouse_pos: [0.0, 0.0],
+                time,
+                _padding: 0,
+                // frame: self.frame,
+                // mouse_pos: [0.0, 0.0],
             }]),
         );
 
@@ -286,6 +303,9 @@ impl State {
 }
 
 async fn run(frag_shader_code: String, width: f64, height: f64) {
+    let env = env_logger::Env::default().default_filter_or(DEFAULT_LOG_LEVEL);
+    env_logger::Builder::from_env(env).init();
+
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_inner_size(PhysicalSize::new(width, height)) // fixed size

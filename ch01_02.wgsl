@@ -1,0 +1,43 @@
+struct VertexOutput {
+    @builtin(position) pos: vec4<f32>,
+};
+
+struct GlobalsUniform {
+    @location(0) resolution: vec2<f32>,
+    @location(1) time:       f32,
+};
+
+@group(0) @binding(0)
+var<uniform> globals: GlobalsUniform;
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    var pos = in.pos.xy / globals.resolution;
+    pos *= 2.0;
+
+    // It seems this cannot be declared in the module space with const- 
+    // declaration. There seems at least two problems:
+    //
+    // 1. first of all, wgpu rejects all `const` keyword. Maybe it's not 
+    //    supported yet?
+    // 2. if we change this to let-declaration, we'll see "The expression
+    //    [<line number>] may only be indexed by a constant" error, which
+    //    I don't understand what's happening...
+    // 
+    var colors = array(
+        vec3(1., 0., 0.),
+        vec3(0., 1., 0.),
+        vec3(0., 0., 1.)
+    );
+
+    // This cannot be written as the following. Probably because `ind + 1`
+    // might overflow?
+    // 
+    // let ind = u32(pos.x);
+    // let color1 = colors[ind];
+    // let color2 = colors[ind + 1];
+    //
+    let color1 = colors[u32(pos.x)];
+    let color2 = colors[u32(pos.x + 1.)];
+    return vec4(mix(color1, color2, fract(pos.x)), 1.0);
+}

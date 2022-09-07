@@ -11,6 +11,6 @@ fn vs_main(
    in: VertexInput,
 ) -> VertexOutput {
     var out: VertexOutput;
-    out.pos = vec4<f32>(in.pos, 0.0, 1.0);
+    out.pos = vec4(in.pos, 0.0, 1.0);
     return out;
 }

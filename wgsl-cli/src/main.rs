@@ -41,6 +41,15 @@ const RECT_VERTICES: &[Vertex] = &[
 ];
 const RECT_INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Globals {
+    resolution: [f32; 2],
+    time: f32,
+    frame: u32,
+    mouse_pos: [f32; 2],
+}
+
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -52,6 +61,9 @@ struct State {
 
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+    globals_bind_group: wgpu::BindGroup,
+    globals_uniform_buffer: wgpu::Buffer,
+
     render_pipeline: wgpu::RenderPipeline,
 }
 
@@ -98,13 +110,6 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(frag_shader_code.into()),
         });
 
-        let render_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
-                push_constant_ranges: &[],
-            });
-
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex buffer"),
             contents: bytemuck::cast_slice(RECT_VERTICES),
@@ -116,6 +121,44 @@ impl State {
             contents: bytemuck::cast_slice(RECT_INDICES),
             usage: wgpu::BufferUsages::INDEX,
         });
+
+        let globals_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Uniform buffer for globals"),
+            size: std::mem::size_of::<Globals>() as _,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let globals_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Globals bind group layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            });
+
+        let globals_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("wgpugd globals bind group"),
+            layout: &globals_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: globals_uniform_buffer.as_entire_binding(),
+            }],
+        });
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&globals_bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
@@ -163,6 +206,8 @@ impl State {
 
             vertex_buffer,
             index_buffer,
+            globals_bind_group,
+            globals_uniform_buffer,
             render_pipeline,
         }
     }
@@ -190,6 +235,18 @@ impl State {
                 label: Some("Render Encoder"),
             });
 
+        self.queue.write_buffer(
+            &self.globals_uniform_buffer,
+            0,
+            bytemuck::cast_slice(&[Globals {
+                resolution: [self.config.width as _, self.config.height as _],
+                // todo
+                time: 0.0,
+                frame: 0,
+                mouse_pos: [0.0, 0.0],
+            }]),
+        );
+
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass Descriptor"),
@@ -205,6 +262,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.globals_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..RECT_INDICES.len() as _, 0, 0..1);

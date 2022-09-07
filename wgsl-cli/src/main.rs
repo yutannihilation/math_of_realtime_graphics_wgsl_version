@@ -1,4 +1,8 @@
-use std::{fs, os, process::exit};
+use std::{
+    fs, os,
+    process::exit,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use argh::FromArgs;
 
@@ -58,6 +62,9 @@ struct State {
     config: wgpu::SurfaceConfiguration,
 
     size: winit::dpi::PhysicalSize<u32>,
+
+    start_time: std::time::Instant,
+    frame: u32,
 
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -204,6 +211,9 @@ impl State {
             config,
             size,
 
+            start_time: std::time::Instant::now(),
+            frame: 0,
+
             vertex_buffer,
             index_buffer,
             globals_bind_group,
@@ -221,7 +231,7 @@ impl State {
     }
 
     fn update(&mut self) {
-        // TODO
+        self.frame += 1;
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -241,8 +251,8 @@ impl State {
             bytemuck::cast_slice(&[Globals {
                 resolution: [self.config.width as _, self.config.height as _],
                 // todo
-                time: 0.0,
-                frame: 0,
+                time: self.start_time.elapsed().as_secs_f32(),
+                frame: self.frame,
                 mouse_pos: [0.0, 0.0],
             }]),
         );

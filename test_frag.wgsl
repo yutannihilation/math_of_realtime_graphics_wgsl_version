@@ -14,5 +14,5 @@ var<uniform> globals: GlobalsUniform;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4<f32>(in.pos.xy / globals.resolution.xy, 0.0, 1.0);
+    return vec4<f32>(in.pos.xy / globals.resolution.xy, sin(globals.time / 10.0), 1.0);
 }

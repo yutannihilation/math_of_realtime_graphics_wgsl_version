@@ -1,15 +1,18 @@
+use std::{fs, os, process::exit};
+
+use argh::FromArgs;
+
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use winit::{
-    dpi::LogicalSize,
+    dpi::PhysicalSize,
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{Window, WindowBuilder},
 };
 
-// TODO
-const HEIGHT: f64 = 1000.0;
-const WIDTH: f64 = 1000.0;
+const DEFAULT_HEIGHT: f64 = 1000.0;
+const DEFAULT_WIDTH: f64 = 1000.0;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -51,7 +54,7 @@ struct State {
 }
 
 impl State {
-    async fn new(window: &Window) -> Self {
+    async fn new(window: &Window, frag_shader_code: String) -> Self {
         let size = window.inner_size();
 
         let instance = wgpu::Instance::new(wgpu::Backends::all());
@@ -87,7 +90,11 @@ impl State {
 
         surface.configure(&device, &config);
 
-        let vertex_shader = device.create_shader_module(include_wgsl!("vert.wgsl"));
+        let vert_shader = device.create_shader_module(include_wgsl!("vert.wgsl"));
+        let frag_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(frag_shader_code.into()),
+        });
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -100,12 +107,12 @@ impl State {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: &vertex_shader,
+                module: &vert_shader,
                 entry_point: "vs_main",
                 buffers: &[],
             },
             fragment: Some(wgpu::FragmentState {
-                module: &vertex_shader,
+                module: &frag_shader,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
@@ -191,15 +198,15 @@ impl State {
     }
 }
 
-async fn run() {
+async fn run(frag_shader_code: String, width: f64, height: f64) {
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
-        .with_inner_size(LogicalSize::new(WIDTH, HEIGHT)) // fixed size
+        .with_inner_size(PhysicalSize::new(width, height)) // fixed size
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
 
-    let mut state = State::new(&window).await;
+    let mut state = State::new(&window, frag_shader_code).await;
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -249,6 +256,33 @@ async fn run() {
     });
 }
 
+#[derive(FromArgs, Debug)]
+/// Reach new heights.
+struct CliOptions {
+    /// width of the window
+    #[argh(option, short = 'w', default = "DEFAULT_WIDTH")]
+    width: f64,
+
+    /// height of the window
+    #[argh(option, short = 'h', default = "DEFAULT_HEIGHT")]
+    height: f64,
+
+    /// path to fragment shader
+    #[argh(positional)]
+    frag_shader: String,
+}
+
 fn main() {
-    pollster::block_on(run());
+    let opts: CliOptions = argh::from_env();
+    // println!("{:#?}", opts);
+
+    let res = fs::read_to_string(opts.frag_shader);
+    if res.is_err() {
+        eprintln!("{:?}", res);
+        exit(1);
+    }
+
+    let frag_shader_code = res.unwrap();
+
+    pollster::block_on(run(frag_shader_code, opts.width, opts.height));
 }

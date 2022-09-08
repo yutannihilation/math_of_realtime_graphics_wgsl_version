@@ -31,8 +31,8 @@ fn pol2xy(pol: vec2<f32>) -> vec2<f32> {
 }
 
 fn tex(st: vec2<f32>) -> vec3<f32> {
-    let t = 0.2 * globals.time;
-    let circ = vec3(pol2xy(vec2(t, 0.5)) + 0.5, 1.0);
+    let t = 0.35 * globals.time;
+    let circ = vec3(pol2xy(vec2(t, 0.8)) + 0.313, 1.0);
 
     // It seems this cannot be declared in the module space with const- 
     // declaration. There seems at least two problems:

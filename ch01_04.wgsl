@@ -34,7 +34,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     pos *= n;
 
     // NOTE: unlike GLSL, step(x, y) requires that x and y are the same type
-    pos = floor(pos) + step(vec2(0.5, 0.5), fract(pos));
+    pos = floor(pos) + step(vec2(0.5), fract(pos));
 
     // NOTE: pos /= n won't work. Why...?
     pos = pos / n;

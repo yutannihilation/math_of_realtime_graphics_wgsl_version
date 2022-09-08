@@ -35,7 +35,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     let thr = 0.25 * sin(globals.time);
     // NOTE: unlike GLSL, smoothstep(x, y, z) requires that x, y, and z are the same type
-    pos = floor(pos) + smoothstep(vec2(0.25 + thr, 0.25 + thr), vec2(0.75 - thr, 0.75 - thr), fract(pos));
+    pos = floor(pos) + smoothstep(vec2(0.25 + thr), vec2(0.75 - thr), fract(pos));
 
     // NOTE: pos /= n won't work. Why...?
     pos = pos / n;

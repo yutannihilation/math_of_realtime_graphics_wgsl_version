@@ -50,7 +50,7 @@ const RECT_INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];
 struct Globals {
     resolution: [f32; 2],
     time: f32,
-    _padding: u32,
+    channel: u32,
     // frame: u32,
     // mouse_pos: [f32; 2],
 }
@@ -67,6 +67,7 @@ struct State {
     start_time: std::time::Instant,
     last_time_elapsed: f32,
     frame: u32,
+    channel: u32,
 
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -216,6 +217,7 @@ impl State {
             start_time: std::time::Instant::now(),
             last_time_elapsed: 0.0,
             frame: 0,
+            channel: 0,
 
             vertex_buffer,
             index_buffer,
@@ -246,6 +248,19 @@ impl State {
                             self.start_time = std::time::Instant::now();
                             self.last_time_elapsed = 0.0;
                             self.frame = 0;
+                        }
+                        // Change channel
+                        Some(VirtualKeyCode::Up) => {
+                            self.channel += 1;
+                            log::info!("Channel {} is used", self.channel);
+                        }
+                        Some(VirtualKeyCode::Down) => {
+                            if self.channel > 0 {
+                                self.channel -= 1;
+                                log::info!("Channel {} is used", self.channel);
+                            } else {
+                                log::info!("Channel 0 is the lowest!");
+                            }
                         }
                         _ => {}
                     }
@@ -292,7 +307,7 @@ impl State {
                 resolution: [self.size.width as _, self.size.height as _],
                 // todo
                 time,
-                _padding: 0,
+                channel: self.channel,
                 // frame: self.frame,
                 // mouse_pos: [0.0, 0.0],
             }]),

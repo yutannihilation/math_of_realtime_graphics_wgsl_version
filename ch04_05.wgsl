@@ -64,31 +64,9 @@ fn gtable3(lattice: vec3<f32>, p: vec3<f32>) -> f32 {
     let n = bitcast<u32>(lattice);
     let ind = (uhash33(n).x >> 28u);
     // select()'s argument is `select(<false case>, <true case>, <condition>)`
-
-    if globals.channel == 0u {
-        let u = select(p.x, p.y, ind >= 8u);
-        let v = select(p.y, select(p.z, p.x, ind == 12u || ind == 14u), ind >= 4u);
-        return select(-u, u, (ind & 1u) == 0u) + select(-v, v, (ind & 2u) == 0u);
-    } else {
-        var m = array(
-            vec3( 1.,  1.,  0.),
-            vec3(-1.,  1.,  0.),
-            vec3( 1., -1.,  0.),
-            vec3(-1., -1.,  0.),
-            vec3( 1.,  0.,  1.),
-            vec3(-1.,  0.,  1.),
-            vec3( 1.,  0., -1.),
-            vec3(-1.,  0., -1.),
-            vec3( 0.,  1.,  1.),
-            vec3( 0., -1.,  1.),
-            vec3( 0.,  1., -1.),
-            vec3( 0., -1., -1.)
-        );
-
-        // Note: `% 12u` doesn't give the same result as above, but let's use this for simplicity.
-        return dot(p, m[ind % 12u]);
-    }
-
+    let u = select(p.x, p.y, ind >= 8u);
+    let v = select(p.y, select(p.z, p.x, ind == 12u || ind == 14u), ind >= 4u);
+    return select(-u, u, (ind & 1u) == 0u) + select(-v, v, (ind & 2u) == 0u);
 }
 
 fn pnoise31(p: vec3<f32>) -> f32 {
@@ -114,6 +92,11 @@ fn pnoise31(p: vec3<f32>) -> f32 {
     }
 
     return 0.5 * mix(w[0], w[1], f[2]) + 0.5;
+}
+
+// we cannot define a function called mod() because it's a reserved keyword
+fn mod_floor(x: vec2<f32>, y: f32) -> vec2<f32> {
+    return x - y * floor(x/y);
 }
 
 fn gtable2(lattice: vec2<f32>, p: vec2<f32>) -> f32 {
@@ -152,7 +135,7 @@ fn perinoise21(p: vec2<f32>, period: f32) -> f32 {
     for (var j = 0; j < 2; j++) {
         for (var i = 0; i < 2; i++) {
             let ij = vec2(f32(i), f32(j));
-            v[i+2*j] = gtable2((n + ij) % period, f - ij);
+            v[i+2*j] = gtable2(mod_floor(n + ij, period), f - ij);
         }
     }
 

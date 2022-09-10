@@ -106,7 +106,9 @@ impl State {
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
+            // Note: Learn Wgpu specifies `surface.get_supported_formats(&adapter)[0]`, and, in my case, it's
+            //       Bgra8UnormSrgb. But, it seems it's not sRGB?
+            format: wgpu::TextureFormat::Bgra8Unorm,
             width: size.width,
             height: size.height,
             present_mode: wgpu::PresentMode::Fifo,
@@ -282,9 +284,10 @@ impl State {
 
         if self.frame % 10 == 0 {
             log::info!(
-                "frame: {} (fps: {:.3})",
+                "frame: {} (fps: {:.3}), time: {:.1}",
                 self.frame,
-                10. / (time - self.last_time_elapsed)
+                10. / (time - self.last_time_elapsed),
+                time,
             );
 
             self.last_time_elapsed = time;

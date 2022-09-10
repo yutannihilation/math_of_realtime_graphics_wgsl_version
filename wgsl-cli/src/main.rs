@@ -280,9 +280,9 @@ impl State {
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         self.frame += 1;
-        let time = self.start_time.elapsed().as_secs_f32();
 
         if self.frame % 10 == 0 {
+            let time = self.start_time.elapsed().as_secs_f32();
             log::info!(
                 "frame: {} (fps: {:.3}), time: {:.1}",
                 self.frame,
@@ -309,7 +309,7 @@ impl State {
             bytemuck::cast_slice(&[Globals {
                 resolution: [self.size.width as _, self.size.height as _],
                 // todo
-                time,
+                time: self.frame as f32 / 30.,
                 channel: self.channel,
                 // frame: self.frame,
                 // mouse_pos: [0.0, 0.0],

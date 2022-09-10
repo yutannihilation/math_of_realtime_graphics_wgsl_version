@@ -140,11 +140,6 @@ fn pnoise31(p: vec3<f32>) -> f32 {
     return 0.5 * mix(w[0], w[1], f[2]) + 0.5;
 }
 
-// we cannot define a function called mod() because it's a reserved keyword
-fn mod_floor(x: vec2<f32>, y: f32) -> vec2<f32> {
-    return x - y * floor(x/y);
-}
-
 fn gtable2(lattice: vec2<f32>, p: vec2<f32>) -> f32 {
     let n = bitcast<u32>(lattice);
     let ind = uhash22(n).x >> 29u;
@@ -163,25 +158,6 @@ fn pnoise21(p: vec2<f32>) -> f32 {
         for (var i = 0; i < 2; i++) {
             let ij = vec2(f32(i), f32(j));
             v[i+2*j] = gtable2(n + ij, f - ij);
-        }
-    }
-
-    // Hermite interpolation
-    f = f * f * f * (10.0 - 15.0 * f + 6.0 * f * f);
-
-    return 0.5 * mix(mix(v[0], v[1], f[0]), mix(v[2], v[3], f[0]), f[1]) + 0.5;
-}
-
-
-fn perinoise21(p: vec2<f32>, period: f32) -> f32 {
-    let n = floor(p);
-    var f = fract(p);
-
-    var v: array<f32, 4>;
-    for (var j = 0; j < 2; j++) {
-        for (var i = 0; i < 2; i++) {
-            let ij = vec2(f32(i), f32(j));
-            v[i+2*j] = gtable2(mod_floor(n + ij, period), f - ij);
         }
     }
 
@@ -237,6 +213,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var pos = in.pos.xy / globals.resolution.xy;
 
     let g = abs((0.2 * globals.time) % 2.0 - 1.0);
-    let f = fbm21(10.0 * pos + globals.time, g);
+    let f = fbm21(10.0 * pos, g);
     return vec4(vec3(f), 1.0);
 }

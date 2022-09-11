@@ -226,26 +226,32 @@ fn converter(v: f32, t: u32) -> f32 {
     }
 }
 
+fn blend(a: f32, b: f32) -> vec3<f32> {
+    let time = abs((0.1 * globals.time) % 2.0 - 1.0);
+    if globals.channel > 0u {
+        return mix(
+            vec3(a, a, 1.),
+            vec3(0., b, b),
+            smoothstep(0.5 - 0.5 * time, 0.5 + 0.5 * time, b / (a + b))
+        );
+    } else {
+        return mix(
+            vec3(a, a, 1.),
+            vec3(0., b, b),
+            time
+        );
+    }
+}
+
 //********** Main *********************************************//
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var pos = in.pos.xy / globals.resolution.xy;
-    var t = 0u;
+    pos = 8.0 * pos;
 
-    // devide screen
-    if globals.channel > 0u {
-        let pos_ = 2.0 * pos;
-        pos = fract(pos_);
-        t = u32(dot(floor(pos_), vec2(2.0, 1.0)));
-    }
-    pos = 10.0 * pos;
+    let a = warp21(pos + 0.3 * globals.time,        1.0 + 0.5 * sin(0.21 * globals.time));
+    let b = warp21(pos + 0.3 * globals.time + 10.0, 0.9 + 0.6 * sin(0.19 * globals.time));
 
-    var f = warp21(pos + globals.time, 1.0);
-
-    if globals.channel > 0u {
-        f = converter(f, t);
-    }
-
-    return vec4(vec3(f), 1.0);
+    return vec4(blend(a, b), 1.0);
 }

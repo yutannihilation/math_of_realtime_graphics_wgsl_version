@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # wgpu
-wgpu = { git = "https://github.com/gfx-rs/wgpu" }
+wgpu = "0.14"
 bytemuck = { version = "1.12", features = [ "derive" ] }
 
 # window-related

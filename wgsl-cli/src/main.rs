@@ -52,7 +52,7 @@ struct Globals {
     time: f32,
     channel: u32,
     // frame: u32,
-    // mouse_pos: [f32; 2],
+    mouse_pos: [f32; 2],
 }
 
 struct State {
@@ -68,6 +68,7 @@ struct State {
     last_time_elapsed: f32,
     frame: u32,
     channel: u32,
+    mouse_pos: [f32; 2],
 
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
@@ -220,6 +221,7 @@ impl State {
             last_time_elapsed: 0.0,
             frame: 0,
             channel: 0,
+            mouse_pos: [0.0; 2],
 
             vertex_buffer,
             index_buffer,
@@ -268,6 +270,21 @@ impl State {
                     }
                 }
             }
+            WindowEvent::CursorMoved { position, .. } => {
+                self.mouse_pos = [position.x as _, position.y as _];
+            }
+            // WindowEvent::MouseInput { state, button, .. } => {
+            //     if *state == ElementState::Pressed {
+            //         match button {
+            //             MouseButton::Left => {
+
+            //             }
+            //             MouseButton::Right => {}
+            //             MouseButton::Middle => {}
+            //             MouseButton::Other(_) => {}
+            //         }
+            //     }
+            // }
             _ => {}
         }
 
@@ -312,7 +329,7 @@ impl State {
                 time: self.frame as f32 / 30.,
                 channel: self.channel,
                 // frame: self.frame,
-                // mouse_pos: [0.0, 0.0],
+                mouse_pos: self.mouse_pos,
             }]),
         );
 
